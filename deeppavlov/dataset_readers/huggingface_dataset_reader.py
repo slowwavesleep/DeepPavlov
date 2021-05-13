@@ -15,7 +15,7 @@
 
 from typing import Dict, Optional
 
-from datasets import load_dataset, Dataset
+from datasets import load_dataset, Dataset, ClassLabel
 from overrides import overrides
 
 from deeppavlov.core.common.registry import register
@@ -49,4 +49,37 @@ class HuggingFaceDatasetReader(DatasetReader):
         # filter unused splits
         split_mapping = {el: split_mapping[el] for el in split_mapping if split_mapping[el]}
         dataset = load_dataset(path=path, name=name, split=list(split_mapping.values()), **kwargs)
+        if name == 'copa':
+            dataset = [convert_copa_split(split) for split in dataset]
         return dict(zip(split_mapping.keys(), dataset))
+
+
+def convert_copa_split(data):
+    question_dict = {
+        "cause": "What was the cause of this?",
+        "effect": "What happened as a result?",
+    }
+
+    split = data.split
+
+    label_feat = ClassLabel(num_classes=2, names=["correct", "incorrect"])
+    data_dict = {"idx": [], "context": [], "choice": [], "label": []}
+    for example in data:
+        question = question_dict[example["question"]]
+        choices = [example["choice1"], example["choice2"]]
+        for i in range(len(choices)):
+            data_dict["idx"].append(example["idx"])
+            data_dict["context"].append(f"{example['premise']} {question}")
+            data_dict["choice"].append(choices[i])
+
+            if example["label"] != -1:
+                correct = int(example["label"] == i)
+            else:
+                correct = -1
+
+            data_dict["label"].append(correct)
+
+    dataset = Dataset.from_dict(data_dict, split=split)
+    dataset.features["label"] = label_feat
+
+    return dataset
