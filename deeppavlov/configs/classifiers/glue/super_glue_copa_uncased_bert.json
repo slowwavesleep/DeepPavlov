@@ -14,7 +14,7 @@
     "seed": 42
   },
   "chainer": {
-    "in": ["sentence1", "sentence2"],
+    "in": ["context", "choice"],
     "in_y": ["y"],
     "pipe": [
       {
@@ -22,7 +22,7 @@
         "vocab_file": "{BASE_MODEL}",
         "do_lower_case": true,
         "max_seq_length": 256,
-        "in": ["sentence1", "sentence2"],
+        "in": ["context", "choice"],
         "out": ["bert_features"]
       },
       {
@@ -89,7 +89,7 @@
       "ROOT_PATH": "~/.deeppavlov",
       "DOWNLOADS_PATH": "{ROOT_PATH}/downloads",
       "MODELS_PATH": "{ROOT_PATH}/models",
-      "MODEL_PATH": "{MODELS_PATH}/classifiers/glue_rte_torch_cased_bert",
+      "MODEL_PATH": "{MODELS_PATH}/classifiers/super_glue_copa_torch_cased",
       "BASE_MODEL": "bert-base-uncased"
     },
     "requirements": [
