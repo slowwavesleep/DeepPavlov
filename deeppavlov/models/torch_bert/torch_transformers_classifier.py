@@ -265,3 +265,12 @@ class TorchTransformersClassifierModel(TorchModel):
                 self.epochs_done = checkpoint.get("epochs_done", 0)
             else:
                 log.info(f"Init from scratch. Load path {weights_path} does not exist.")
+
+
+class AutoModelForBinaryClassification(torch.nn.Module):
+
+    def __init__(self):
+        pass
+
+    def forward(self):
+        pass
