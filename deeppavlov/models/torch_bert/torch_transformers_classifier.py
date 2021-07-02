@@ -14,12 +14,12 @@
 
 from logging import getLogger
 from pathlib import Path
-from typing import List, Dict, Union, Optional, Tuple
+from typing import List, Dict, Union, Optional, Tuple, Any
 
 import numpy as np
 import torch
 from overrides import overrides
-from transformers import AutoModelForSequenceClassification, AutoConfig
+from transformers import AutoModelForSequenceClassification, AutoConfig, AutoModel
 
 from deeppavlov.core.common.errors import ConfigError
 from deeppavlov.core.commands.utils import expand_path
@@ -269,8 +269,30 @@ class TorchTransformersClassifierModel(TorchModel):
 
 class AutoModelForBinaryClassification(torch.nn.Module):
 
-    def __init__(self):
-        pass
+    def __init__(self, config):
+        super().__init__()
+        self.config = config
+
+        self.pretrained_model = AutoModel(...)
+        self.classifier = BinaryClassificationHead(config)
 
     def forward(self):
         pass
+
+
+class BinaryClassificationHead(torch.nn.Module):
+
+    def __init__(self, config):
+        super().__init__()
+        self.dense = torch.nn.Linear(config.hidden_size, config.hidden_size)
+        self.dropout = torch.nn.Dropout(config.hidden_dropout_prob)
+        self.out_proj = torch.nn.Linear(config.hidden_size, 1)
+
+    def forward(self, features, **kwargs):
+        x = features[:, 0, :]
+        x = self.dropout(x)
+        x = self.dense(x)
+        x = torch.tanh(x)
+        x = self.dropout(x)
+        x = self.out_proj(x)
+        return x
