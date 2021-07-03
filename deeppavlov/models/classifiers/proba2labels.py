@@ -71,9 +71,9 @@ class Proba2Labels(Component):
         if self.confidence_threshold:
             # TODO replace with the following
             # TODO rename to _confidence_ threshold
-            # return [int(el > self.confidence_threshold) for el in data]
-            return [list(np.where(np.array(d) > self.confidence_threshold)[0])
-                    for d in data]
+            return [int(el > self.confidence_threshold) for el in data]
+            # return [list(np.where(np.array(d) > self.confidence_threshold)[0])
+            #         for d in data]
         elif self.max_proba:
             return [np.argmax(d) for d in data]
         elif self.top_n:
