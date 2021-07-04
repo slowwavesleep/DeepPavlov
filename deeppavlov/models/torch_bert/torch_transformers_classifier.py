@@ -111,13 +111,14 @@ class TorchTransformersClassifierModel(TorchModel):
 
         accepted_keys = self.get_accepted_keys()
 
-        if self.n_classes > 1:
-            _input["labels"] = torch.from_numpy(np.array(y)).to(self.device)
+        # if self.n_classes > 1:
+        #     _input["labels"] = torch.from_numpy(np.array(y)).to(self.device)
+        #
+        # # regression
+        # else:
+        #     _input["labels"] = torch.from_numpy(np.array(y, dtype=np.float32)).unsqueeze(1).to(self.device)
 
-        # regression
-        else:
-            _input["labels"] = torch.from_numpy(np.array(y, dtype=np.float32)).unsqueeze(1).to(self.device)
-
+        _input["labels"] = torch.from_numpy(np.array(y, dtype=np.float32)).unsqueeze(1).to(self.device)
         self.optimizer.zero_grad()
 
         tokenized = {key: value for (key, value) in _input.items()
@@ -164,7 +165,7 @@ class TorchTransformersClassifierModel(TorchModel):
         if self.return_probas:
             if not self.multilabel:
                 # TODO add a special case for binary classification
-                pred = torch.nn.functional.sigmoid(logits).squeeze(1)
+                pred = torch.sigmoid(logits).squeeze(1)
                 # pred = torch.nn.functional.softmax(logits, dim=-1)
             else:
                 pred = torch.nn.functional.sigmoid(logits)
@@ -315,7 +316,7 @@ class RobertaForBinaryClassification(RobertaPreTrainedModel):
         loss = None
         if labels is not None:
             loss_fct = BCEWithLogitsLoss()
-            loss = loss_fct(logits.squeeze(1), labels.float())
+            loss = loss_fct(logits, labels)
 
         if not return_dict:
             output = (logits,) + outputs[2:]
