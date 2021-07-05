@@ -287,8 +287,6 @@ class RobertaForBinaryClassification(RobertaPreTrainedModel):
 
         self.classifier.init_weights()
 
-        # self.init_weights()
-
     def forward(self,
                 input_ids=None,
                 attention_mask=None,
