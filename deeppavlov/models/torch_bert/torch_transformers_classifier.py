@@ -201,39 +201,40 @@ class TorchTransformersClassifierModel(TorchModel):
             config = AutoConfig.from_pretrained(self.pretrained_bert,
                                                 # num_labels=self.n_classes,
                                                 output_attentions=False,
-                                                output_hidden_states=False)
+                                                output_hidden_states=False,
+                                                add_pooling_layer=False)
 
-            # self.model = RobertaForBinaryClassification(self.pretrained_bert, config=config)
+            self.model = RobertaForBinaryClassification(self.pretrained_bert, config=config)
 
-            self.model = AutoModelForSequenceClassification.from_pretrained(self.pretrained_bert, config=config)
-
-            try:
-                hidden_size = self.model.classifier.out_proj.in_features
-
-                if self.n_classes != self.model.num_labels:
-                    self.model.classifier.out_proj.weight = torch.nn.Parameter(torch.randn(self.n_classes, hidden_size))
-                    self.model.classifier.out_proj.bias = torch.nn.Parameter(torch.randn(self.n_classes))
-                    self.model.classifier.out_proj.out_features = self.n_classes
-                    self.model.num_labels = self.n_classes
-
-            except torch.nn.modules.module.ModuleAttributeError:
-                hidden_size = self.model.classifier.in_features
-
-                if self.n_classes != self.model.num_labels:
-                    self.model.classifier.weight = torch.nn.Parameter(torch.randn(self.n_classes, hidden_size))
-                    self.model.classifier.bias = torch.nn.Parameter(torch.randn(self.n_classes))
-                    self.model.classifier.out_features = self.n_classes
-                    self.model.num_labels = self.n_classes
-
-        elif self.bert_config_file and Path(self.bert_config_file).is_file():
-            self.bert_config = AutoConfig.from_json_file(str(expand_path(self.bert_config_file)))
-            if self.attention_probs_keep_prob is not None:
-                self.bert_config.attention_probs_dropout_prob = 1.0 - self.attention_probs_keep_prob
-            if self.hidden_keep_prob is not None:
-                self.bert_config.hidden_dropout_prob = 1.0 - self.hidden_keep_prob
-            self.model = AutoModelForSequenceClassification.from_config(config=self.bert_config)
-        else:
-            raise ConfigError("No pre-trained BERT model is given.")
+        #     self.model = AutoModelForSequenceClassification.from_pretrained(self.pretrained_bert, config=config)
+        #
+        #     try:
+        #         hidden_size = self.model.classifier.out_proj.in_features
+        #
+        #         if self.n_classes != self.model.num_labels:
+        #             self.model.classifier.out_proj.weight = torch.nn.Parameter(torch.randn(self.n_classes, hidden_size))
+        #             self.model.classifier.out_proj.bias = torch.nn.Parameter(torch.randn(self.n_classes))
+        #             self.model.classifier.out_proj.out_features = self.n_classes
+        #             self.model.num_labels = self.n_classes
+        #
+        #     except torch.nn.modules.module.ModuleAttributeError:
+        #         hidden_size = self.model.classifier.in_features
+        #
+        #         if self.n_classes != self.model.num_labels:
+        #             self.model.classifier.weight = torch.nn.Parameter(torch.randn(self.n_classes, hidden_size))
+        #             self.model.classifier.bias = torch.nn.Parameter(torch.randn(self.n_classes))
+        #             self.model.classifier.out_features = self.n_classes
+        #             self.model.num_labels = self.n_classes
+        #
+        # elif self.bert_config_file and Path(self.bert_config_file).is_file():
+        #     self.bert_config = AutoConfig.from_json_file(str(expand_path(self.bert_config_file)))
+        #     if self.attention_probs_keep_prob is not None:
+        #         self.bert_config.attention_probs_dropout_prob = 1.0 - self.attention_probs_keep_prob
+        #     if self.hidden_keep_prob is not None:
+        #         self.bert_config.hidden_dropout_prob = 1.0 - self.hidden_keep_prob
+        #     self.model = AutoModelForSequenceClassification.from_config(config=self.bert_config)
+        # else:
+        #     raise ConfigError("No pre-trained BERT model is given.")
 
         # TODO that should probably be parametrized in config
         if self.device.type == "cuda" and torch.cuda.device_count() > 1:
@@ -281,10 +282,10 @@ class RobertaForBinaryClassification(RobertaPreTrainedModel):
         self.config = config
         self.pretrained_bert = pretrained_bert
 
-        self.roberta = RobertaModel(config, add_pooling_layer=False)
+        self.roberta = RobertaModel.from_pretrained(self.pretrained_bert, config=config)
         self.classifier = BinaryClassificationHead(config)
 
-        self.init_weights()
+        # self.init_weights()
 
     def forward(self,
                 input_ids=None,
@@ -317,7 +318,7 @@ class RobertaForBinaryClassification(RobertaPreTrainedModel):
         if labels is not None:
             loss_fct = BCEWithLogitsLoss()
             loss = loss_fct(logits, labels)
-
+            # loss = loss_fct(logits.squeeze(1), labels.float())
         if not return_dict:
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
