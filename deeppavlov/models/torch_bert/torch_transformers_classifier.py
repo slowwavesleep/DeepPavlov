@@ -267,7 +267,8 @@ class TorchTransformersClassifierModel(TorchModel):
                 # of transformers library
                 strict_load_flag = bool([key for key in checkpoint["model_state_dict"].keys()
                                          if key.endswith("embeddings.position_ids")])
-                self.model.load_state_dict(checkpoint["model_state_dict"], strict=strict_load_flag)
+                print(checkpoint["model_state_dict"]["module.roberta.pooler.dense.weight"])
+                self.model.load_state_dict(checkpoint["model_state_dict"], strict=False)
                 self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
                 self.epochs_done = checkpoint.get("epochs_done", 0)
             else:
