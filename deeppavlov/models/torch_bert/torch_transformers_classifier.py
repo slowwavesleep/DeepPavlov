@@ -14,7 +14,7 @@
 import os
 from logging import getLogger
 from pathlib import Path
-from typing import List, Dict, Union, Optional, Tuple, Any
+from typing import List, Dict, Union, Optional, Tuple
 
 import numpy as np
 import torch
@@ -190,6 +190,7 @@ class TorchTransformersClassifierModel(TorchModel):
     def is_data_parallel(self) -> bool:
         return isinstance(self.model, torch.nn.DataParallel)
 
+    # TODO this method requires massive refactoring
     @overrides
     def load(self, fname=None):
         if fname is not None:
@@ -206,7 +207,7 @@ class TorchTransformersClassifierModel(TorchModel):
                 self.model = AutoModelForBinaryClassification(config)
                 self.model.load_pretrained_weights(self.pretrained_bert)
             else:
-                self.model = AutoModelForSequenceClassification.from_config(config)
+                # self.model = AutoModelForSequenceClassification.from_config(config)
                 self.model = AutoModelForSequenceClassification.from_pretrained(self.pretrained_bert, config=config)
 
                 # TODO need a better solution here
@@ -270,7 +271,7 @@ class TorchTransformersClassifierModel(TorchModel):
                 # of transformers library
                 strict_load_flag = bool([key for key in checkpoint["model_state_dict"].keys()
                                          if key.endswith("embeddings.position_ids")])
-                self.model.load_state_dict(checkpoint["model_state_dict"], strict=False)
+                self.model.load_state_dict(checkpoint["model_state_dict"], strict=strict_load_flag)
                 self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
                 self.epochs_done = checkpoint.get("epochs_done", 0)
             else:

@@ -64,6 +64,7 @@
         "in": ["y_pred_probas"],
         "out": ["y_pred_ids"],
         "class_name": "proba2labels",
+        "is_binary": "{BINARY_CLASSIFICATION}",
         "confidence_threshold": 0.5
       },
       {
