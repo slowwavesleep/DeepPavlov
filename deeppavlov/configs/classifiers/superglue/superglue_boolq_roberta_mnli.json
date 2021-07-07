@@ -21,7 +21,7 @@
         "class_name": "torch_transformers_preprocessor",
         "vocab_file": "{BASE_MODEL}",
         "do_lower_case": false,
-        "max_seq_length": 192,
+        "max_seq_length": 256,
         "in": ["question", "passage"],
         "out": ["bert_features"]
       },
@@ -50,7 +50,8 @@
         "load_path": "{MODEL_PATH}/model",
         "optimizer": "AdamW",
         "optimizer_parameters": {
-          "lr": 2e-05
+          "lr": 2e-05,
+          "weight_decay": 0.1
         },
         "learning_rate_drop_patience": 3,
         "learning_rate_drop_div": 2.0,
@@ -62,7 +63,7 @@
         "in": ["y_pred_probas"],
         "out": ["y_pred_ids"],
         "class_name": "proba2labels",
-        "max_proba": true
+        "confidence_threshold": 0.5
       },
       {
         "in": ["y_pred_ids"],
@@ -73,7 +74,7 @@
     "out": ["y_pred_labels"]
   },
   "train": {
-    "batch_size": 32,
+    "batch_size": 24,
     "metrics": ["accuracy"],
     "validation_patience": 10,
     "val_every_n_epochs": 1,

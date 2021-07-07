@@ -283,7 +283,7 @@ class RobertaForBinaryClassification(RobertaPreTrainedModel):
         self.config = config
         self.pretrained_bert = pretrained_bert
 
-        self.roberta = RobertaModel.from_pretrained(self.pretrained_bert, config=config)
+        self.roberta = RobertaModel.from_pretrained(self.pretrained_bert, config=config, add_pooling_layer=False)
         self.classifier = BinaryClassificationHead(config)
 
         self.classifier.init_weights()
