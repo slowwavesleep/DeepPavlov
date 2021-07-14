@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Union
 import re
 
 from datasets import load_dataset, Dataset
@@ -97,3 +97,55 @@ def preprocess_boolq(examples: Dataset) -> Dict[str, List[str]]:
     passages = [remove_passage_title(passage) for passage in examples["passage"]]
 
     return {"passage": passages}
+
+
+def preprocess_record(examples: Dataset) -> Dict[str,
+                                                 Union[List[str],
+                                                       List[int]]]:
+
+    def fill_placeholder(sentence: str, candidate: str) -> str:
+        return re.sub(r"@placeholder", candidate.replace("\\", ""), sentence)
+
+    def remove_highlight(context: str) -> str:
+        return re.sub(r"\n@highlight\n", ". ", context)
+
+    queries: List[str] = examples["query"]
+    passages: List[str] = [remove_highlight(passage) for passage in examples["passage"]]
+    answers: List[List[str]] = examples["answers"]
+    entities: List[List[str]] = examples["entities"]
+    indices: List[Dict[str, int]] = examples["idx"]
+
+    merged_indices: List[str] = []
+    filled_queries: List[str] = []
+    extended_passages: List[str] = []
+    flat_entities: List[str] = []
+    labels: List[int] = []
+
+    for query, passage, list_of_answers, list_of_entities, index in zip(queries,
+                                                                        passages,
+                                                                        answers,
+                                                                        entities,
+                                                                        indices):
+        num_candidates: int = len(list_of_entities)
+
+        candidate_queries: List[str] = [fill_placeholder(query, entity) for entity in list_of_entities]
+        cur_labels: List[int] = [int(entity in list_of_answers) if list_of_answers else -1 for entity in
+                                 list_of_entities]
+        cur_passages: List[str] = [passage] * num_candidates
+
+        # keep track of the indices to be able to use target metrics
+        passage_index: int = index["passage"]
+        query_index: int = index["query"]
+        example_indices: List[str] = [f"{passage_index}-{query_index}-{num_candidates}"] * num_candidates
+
+        merged_indices.extend(example_indices)
+        filled_queries.extend(candidate_queries)
+        extended_passages.extend(cur_passages)
+        flat_entities.extend(list_of_entities)
+        labels.extend(cur_labels)
+
+    return {"idx": merged_indices,
+            "query": filled_queries,
+            "passage": extended_passages,
+            "entities": flat_entities,
+            "labels": labels}
