@@ -16,7 +16,7 @@
 from typing import Dict, Optional, List, Union
 import re
 
-from datasets import load_dataset, Dataset
+from datasets import load_dataset, Dataset, Features, ClassLabel
 from overrides import overrides
 
 from deeppavlov.core.common.registry import register
@@ -61,12 +61,22 @@ class HuggingFaceDatasetReader(DatasetReader):
         elif path == "super_glue" and name == "boolq":
             dataset = load_dataset(path=path, name=name, split=interleave_splits(list(split_mapping.values())), **kwargs)
             dataset = [dataset_split.map(preprocess_boolq, batched=True) for dataset_split in dataset]
+        elif path == "super_glue" and name == "record":
+            dataset = [
+                add_label_names(
+                    dataset_split.map(preprocess_record, batched=True, remove_columns=["answers"]),
+                    label_column="label",
+                    label_names=["False", "True"]
+                ) for dataset_split in dataset
+            ]
         return dict(zip(split_mapping.keys(), dataset))
 
 
+# TODO parametrize this
 def interleave_splits(splits: List[str]) -> List[str]:
+    """Adds a portion of `dev` set to the train set
+    """
     return [f"{splits[0]}+{splits[1]}[:50%]", f"{splits[1]}[-50%:]", splits[2]]
-    # return [f"{splits[0]}", f"{splits[1]}", splits[2]]
 
 
 def preprocess_copa(examples: Dataset) -> Dict[str, List[List[str]]]:
@@ -148,4 +158,21 @@ def preprocess_record(examples: Dataset) -> Dict[str,
             "query": filled_queries,
             "passage": extended_passages,
             "entities": flat_entities,
-            "labels": labels}
+            "label": labels}
+
+
+def add_label_names(dataset: Dataset, label_column: str, label_names: List[str]):
+    """Adds `names` to a specified `label` column.
+    All labels (i.e. integers) in the dataset should be < than the number of label names.
+
+    Args:
+        dataset: a Dataset to add label names to
+        label_column: the name of the label column (such as `label` or `labels`) in the dataset
+        label_names: a list of label names
+
+    Returns:
+        Dataset: A copy of the passed `dataset` with added label names
+    """
+    new_features: Features = dataset.features.copy()
+    new_features[label_column] = ClassLabel(names=label_names)
+    return dataset.cast(new_features)
