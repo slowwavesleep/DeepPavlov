@@ -4,8 +4,7 @@
     "path": "super_glue",
     "name": "record",
     "train": "train",
-    "valid": "validation",
-    "test": "test"
+    "valid": "validation"
   },
   "dataset_iterator": {
     "class_name": "huggingface_dataset_iterator",
@@ -21,7 +20,7 @@
         "class_name": "torch_transformers_preprocessor",
         "vocab_file": "{BASE_MODEL}",
         "do_lower_case": false,
-        "max_seq_length": 392,
+        "max_seq_length": 128,
         "in": ["query", "passage"],
         "out": ["bert_features"]
       },
@@ -74,7 +73,7 @@
     "out": ["y_pred_labels"]
   },
   "train": {
-    "batch_size": 16,
+    "batch_size": 64,
     "metrics": ["accuracy"],
     "validation_patience": 10,
     "val_every_n_epochs": 1,

@@ -11,8 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
+from math import floor
 from typing import Dict, Optional, List, Union
 import re
 
@@ -59,14 +58,21 @@ class HuggingFaceDatasetReader(DatasetReader):
         if path == "super_glue" and name == "copa":
             dataset = [dataset_split.map(preprocess_copa, batched=True) for dataset_split in dataset]
         elif path == "super_glue" and name == "boolq":
-            dataset = load_dataset(path=path, name=name, split=interleave_splits(list(split_mapping.values())), **kwargs)
+            dataset = load_dataset(path=path, name=name, split=interleave_splits(list(split_mapping.values())),
+                                   **kwargs)
             dataset = [dataset_split.map(preprocess_boolq, batched=True) for dataset_split in dataset]
         elif path == "super_glue" and name == "record":
+            label_column = "label"
             dataset = [
-                add_label_names(
-                    dataset_split.map(preprocess_record, batched=True, remove_columns=["answers"]),
-                    label_column="label",
-                    label_names=["False", "True"]
+                binary_downsample(
+                    add_label_names(
+                        dataset_split.map(preprocess_record, batched=True, remove_columns=["answers"]),
+                        label_column=label_column,
+                        label_names=["False", "True"]
+                    ),
+                    ratio=1.,
+                    seed=42,
+                    label_column=label_column
                 ) for dataset_split in dataset
             ]
         return dict(zip(split_mapping.keys(), dataset))
@@ -100,7 +106,6 @@ def preprocess_copa(examples: Dataset) -> Dict[str, List[List[str]]]:
 
 
 def preprocess_boolq(examples: Dataset) -> Dict[str, List[str]]:
-
     def remove_passage_title(passage: str) -> str:
         return re.sub(r"^.+-- ", "", passage)
 
@@ -112,7 +117,6 @@ def preprocess_boolq(examples: Dataset) -> Dict[str, List[str]]:
 def preprocess_record(examples: Dataset) -> Dict[str,
                                                  Union[List[str],
                                                        List[int]]]:
-
     def fill_placeholder(sentence: str, candidate: str) -> str:
         return re.sub(r"@placeholder", candidate.replace("\\", ""), sentence)
 
@@ -176,3 +180,17 @@ def add_label_names(dataset: Dataset, label_column: str, label_names: List[str])
     new_features: Features = dataset.features.copy()
     new_features[label_column] = ClassLabel(names=label_names)
     return dataset.cast(new_features)
+
+
+def binary_downsample(dataset: Dataset, ratio: float = 1., seed: int = 42, label_column: str = "label"):
+    dataset_labels = dataset.unique(label_column)
+    if dataset_labels == [-1]:
+        return dataset
+    elif dataset_labels == [0, 1]:
+        num_positive: int = sum(dataset[label_column])
+        num_total: int = len(dataset)
+        num_negative: int = floor(num_positive * ratio if ratio > 0 else num_total - num_positive)
+        sorted_dataset: Dataset = dataset.sort(label_column, reverse=True)
+        return sorted_dataset.select(range(num_positive + num_negative)).shuffle(seed=seed)
+    else:
+        raise ValueError("Only binary classification labels are supported (i.e. [0, 1])")
