@@ -81,11 +81,25 @@ class HuggingFaceDatasetReader(DatasetReader):
 # TODO parametrize this
 def interleave_splits(splits: List[str]) -> List[str]:
     """Adds a portion of `dev` set to the train set
+
+    Args:
+        ...
+
+    Returns:
+        ...
     """
     return [f"{splits[0]}+{splits[1]}[:50%]", f"{splits[1]}[-50%:]", splits[2]]
 
 
 def preprocess_copa(examples: Dataset) -> Dict[str, List[List[str]]]:
+    """COPA preprocessing
+
+    Args:
+        ...
+
+    Returns:
+        ...
+    """
     question_dict = {
         "cause": "What was the cause of this?",
         "effect": "What happened as a result?",
@@ -106,7 +120,25 @@ def preprocess_copa(examples: Dataset) -> Dict[str, List[List[str]]]:
 
 
 def preprocess_boolq(examples: Dataset) -> Dict[str, List[str]]:
+    """BoolQ preprocessing
+
+    Args:
+        ...
+
+    Returns:
+        ...
+    """
+
     def remove_passage_title(passage: str) -> str:
+        """Removes the title of a given passage
+
+        Args:
+            ...
+
+        Returns:
+            ...
+
+        """
         return re.sub(r"^.+-- ", "", passage)
 
     passages = [remove_passage_title(passage) for passage in examples["passage"]]
@@ -117,10 +149,34 @@ def preprocess_boolq(examples: Dataset) -> Dict[str, List[str]]:
 def preprocess_record(examples: Dataset) -> Dict[str,
                                                  Union[List[str],
                                                        List[int]]]:
+    """ReCoRD preprocessing
+
+    Args:
+        ...
+
+    Returns:
+        ...
+
+    """
+
     def fill_placeholder(sentence: str, candidate: str) -> str:
+        """
+        Args:
+            ...
+
+        Returns:
+            ...
+        """
         return re.sub(r"@placeholder", candidate.replace("\\", ""), sentence)
 
     def remove_highlight(context: str) -> str:
+        """
+        Args:
+            ...
+
+        Returns:
+            ...
+        """
         return re.sub(r"\n@highlight\n", ". ", context)
 
     queries: List[str] = examples["query"]
@@ -182,15 +238,30 @@ def add_label_names(dataset: Dataset, label_column: str, label_names: List[str])
     return dataset.cast(new_features)
 
 
-def binary_downsample(dataset: Dataset, ratio: float = 1., seed: int = 42, label_column: str = "label"):
+def binary_downsample(dataset: Dataset, ratio: float = 0., seed: int = 42, label_column: str = "label"):
+    """Downsamples a given dataset split
+
+    Args:
+        ...
+
+    Returns:
+        ...
+    """
     dataset_labels = dataset.unique(label_column)
+    # `test` split shouldn't be downsampled
     if dataset_labels == [-1]:
         return dataset
     elif dataset_labels == [0, 1]:
+        # positive examples are denoted with `1`
         num_positive: int = sum(dataset[label_column])
         num_total: int = len(dataset)
+        # the original number of negative examples is returned if `ratio` is not explicitly specified
         num_negative: int = floor(num_positive * ratio if ratio > 0 else num_total - num_positive)
+        # first `num_positive` examples in a sorted dataset are labeled with `1`
+        # while the rest are labeled with `0`
         sorted_dataset: Dataset = dataset.sort(label_column, reverse=True)
+        # but we need to reshuffle the dataset before returning it
         return sorted_dataset.select(range(num_positive + num_negative)).shuffle(seed=seed)
+    # the same logic is not applicable to cases with > 2 classes
     else:
         raise ValueError("Only binary classification labels are supported (i.e. [0, 1])")
