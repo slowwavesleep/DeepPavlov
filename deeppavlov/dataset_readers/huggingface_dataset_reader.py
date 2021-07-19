@@ -32,7 +32,7 @@ class HuggingFaceDatasetReader(DatasetReader):
              data_path: str,
              path: str,
              name: Optional[str] = None,
-             train: str = 'train',
+             train: str = "train",
              valid: Optional[str] = None,
              test: Optional[str] = None,
              **kwargs) -> Dict[str, Dataset]:
@@ -49,16 +49,19 @@ class HuggingFaceDatasetReader(DatasetReader):
         Returns:
             Dict[str, List[Dict]]: Dictionary with train, valid, test datasets
         """
-        if 'split' in kwargs:
-            raise RuntimeError('Split argument was used. Use train, valid, test arguments instead of split.')
-        split_mapping = {'train': train, 'valid': valid, 'test': test}
+        if "split" in kwargs:
+            raise RuntimeError("Split argument was used. Use train, valid, test arguments instead of split.")
+        split_mapping = {"train": train, "valid": valid, "test": test}
         # filter unused splits
         split_mapping = {el: split_mapping[el] for el in split_mapping if split_mapping[el]}
         dataset = load_dataset(path=path, name=name, split=list(split_mapping.values()), **kwargs)
         if path == "super_glue" and name == "copa":
             dataset = [dataset_split.map(preprocess_copa, batched=True) for dataset_split in dataset]
         elif path == "super_glue" and name == "boolq":
-            dataset = load_dataset(path=path, name=name, split=interleave_splits(list(split_mapping.values())),
+            dataset = load_dataset(path=path,
+                                   name=name,
+                                   split=interleave_splits(splits=list(split_mapping.values()),
+                                                           percentage=50),
                                    **kwargs)
             dataset = [dataset_split.map(preprocess_boolq, batched=True) for dataset_split in dataset]
         elif path == "super_glue" and name == "record":
@@ -78,27 +81,36 @@ class HuggingFaceDatasetReader(DatasetReader):
         return dict(zip(split_mapping.keys(), dataset))
 
 
-# TODO parametrize this
-def interleave_splits(splits: List[str]) -> List[str]:
-    """Adds a portion of `dev` set to the train set
+def interleave_splits(splits: List[str], percentage: int = 50) -> List[str]:
+    """Adds a portion of `dev` (or, `test` if there's only `train` and `test`) set to the `train` set.
+    Assumes that there are at two splits are passed ordered as (train, dev, test).
 
     Args:
-        ...
+        splits: list of strings
+        percentage: percentage (represented as an integer value between 0 and 100)
+                    of samples to extract from `dev` and add to `train`
 
     Returns:
-        ...
+        List[str] containing mixing instructions (e.g. ['train+validation[:50%]', 'validation[-50%:]'])
     """
-    return [f"{splits[0]}+{splits[1]}[:50%]", f"{splits[1]}[-50%:]", splits[2]]
+    if len(splits) < 2:
+        raise ValueError("At least two splits should be passed to this function")
+    mixed_splits = [f"{splits[0]}+{splits[1]}[:{percentage}%]", f"{splits[1]}[-{percentage}%:]"]
+    if len(splits) == 3:
+        mixed_splits += [splits[2]]
+    return mixed_splits
 
 
 def preprocess_copa(examples: Dataset) -> Dict[str, List[List[str]]]:
-    """COPA preprocessing
+    """COPA preprocessing to be applied by the map function
 
     Args:
-        ...
+        examples: an instance of Dataset class
 
     Returns:
-        ...
+        Dict[str, List[List[str]]] with processed features represented as nested
+        list with number of elements corresponding to the number of choices
+        (2 in this case)
     """
     question_dict = {
         "cause": "What was the cause of this?",
@@ -120,10 +132,10 @@ def preprocess_copa(examples: Dataset) -> Dict[str, List[List[str]]]:
 
 
 def preprocess_boolq(examples: Dataset) -> Dict[str, List[str]]:
-    """BoolQ preprocessing
+    """BoolQ preprocessing to be applied by the map function
 
     Args:
-        ...
+        examples: an instance of Dataset class
 
     Returns:
         ...
@@ -238,11 +250,14 @@ def add_label_names(dataset: Dataset, label_column: str, label_names: List[str])
     return dataset.cast(new_features)
 
 
-def binary_downsample(dataset: Dataset, ratio: float = 0., seed: int = 42, label_column: str = "label"):
+def binary_downsample(dataset: Dataset, ratio: float = 0., seed: int = 42, label_column: str = "label") -> Dataset:
     """Downsamples a given dataset split
 
     Args:
-        ...
+        dataset:
+        ratio:
+        seed: a seed for shuffling
+        label_column: the name of `label` column such as 'label' or 'labels'
 
     Returns:
         ...
