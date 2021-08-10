@@ -55,12 +55,19 @@ class HuggingFaceDatasetReader(DatasetReader):
         split_mapping = {'train': train, 'valid': valid, 'test': test}
         # filter unused splits
         split_mapping = {el: split_mapping[el] for el in split_mapping if split_mapping[el]}
-        dataset = load_dataset(path=path, name=name, split=list(split_mapping.values()), **kwargs)
-        if path == "super_glue" and name == "copa":
-            dataset = [dataset_split.map(preprocess_copa, batched=True) for dataset_split in dataset]
-        elif path == "super_glue" and name == "boolq":
-            dataset = load_dataset(path=path, name=name, split=interleave_splits(list(split_mapping.values())), **kwargs)
-            dataset = [dataset_split.map(preprocess_boolq, batched=True) for dataset_split in dataset]
+
+        if path == "json":
+            if isinstance(kwargs.get("data_files"), dict):
+                dataset = load_dataset(path=path, split=list(split_mapping.values()), **kwargs)
+            else:
+                raise ValueError(f"Expected `data_files` as a dict but got {type(kwargs.get('data_files'))}")
+        else:
+            dataset = load_dataset(path=path, name=name, split=list(split_mapping.values()), **kwargs)
+            if path == "super_glue" and name == "copa":
+                dataset = [dataset_split.map(preprocess_copa, batched=True) for dataset_split in dataset]
+            elif path == "super_glue" and name == "boolq":
+                dataset = load_dataset(path=path, name=name, split=interleave_splits(list(split_mapping.values())), **kwargs)
+                dataset = [dataset_split.map(preprocess_boolq, batched=True) for dataset_split in dataset]
         return dict(zip(split_mapping.keys(), dataset))
 
 
