@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import inspect
 from logging import getLogger
 from typing import Tuple, Optional, Iterable, Collection, Any
 
@@ -26,13 +26,18 @@ log = getLogger(__name__)
 @register('torch_trainer')
 class TorchTrainer(NNTrainer):
 
-    def test(self, data: Iterable[Tuple[Collection[Any], Collection[Any]]],
-             metrics: Optional[Collection[Metric]] = None, *,
-             start_time: Optional[float] = None, show_examples: Optional[bool] = None) -> dict:
+    def test(self,
+             data: Iterable[Tuple[Collection[Any], Collection[Any]]],
+             metrics: Optional[Collection[Metric]] = None,
+             *,
+             start_time: Optional[float] = None,
+             show_examples: Optional[bool] = None,
+             total_size: Optional[int] = None) -> dict:
         self._chainer.get_main_component().model.eval()
 
-        report = super(TorchTrainer, self).test(data=data, metrics=metrics, start_time=start_time,
-                                                show_examples=show_examples)
+        report = super(TorchTrainer, self).test(
+            data=data, metrics=metrics, start_time=start_time, show_examples=show_examples
+        )
         self._chainer.get_main_component().model.train()
         return report
 

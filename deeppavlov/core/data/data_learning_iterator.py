@@ -32,16 +32,13 @@ class DataLearningIterator:
         random: instance of ``Random`` initialized with a seed
     """
 
-    def split(self, *args, **kwargs):
-        """ Manipulate self.train, self.valid, and self.test into their final form. """
-        pass
+    def __init__(self,
+                 data: Dict[str, List[Tuple[Any, Any]]],
+                 seed: int = None,
+                 shuffle: bool = True,
+                 *args,
+                 **kwargs) -> None:
 
-    def preprocess(self, data: List[Tuple[Any, Any]], *args, **kwargs) -> List[Tuple[Any, Any]]:
-        """ Transform the data for a specific data type (e.g. ``'train'``). """
-        return data
-
-    def __init__(self, data: Dict[str, List[Tuple[Any, Any]]], seed: int = None, shuffle: bool = True,
-                 *args, **kwargs) -> None:
         self.shuffle = shuffle
 
         self.random = Random(seed)
@@ -57,7 +54,17 @@ class DataLearningIterator:
             'all': self.train + self.test + self.valid
         }
 
-    def gen_batches(self, batch_size: int, data_type: str = 'train',
+    def split(self, *args, **kwargs):
+        """ Manipulate self.train, self.valid, and self.test into their final form. """
+        pass
+
+    def preprocess(self, data: List[Tuple[Any, Any]], *args, **kwargs) -> List[Tuple[Any, Any]]:
+        """ Transform the data for a specific data type (e.g. ``'train'``). """
+        return data
+
+    def gen_batches(self,
+                    batch_size: int,
+                    data_type: str = 'train',
                     shuffle: bool = None) -> Iterator[Tuple[tuple, tuple]]:
         """Generate batches of inputs and expected output to train neural networks
 
@@ -78,15 +85,17 @@ class DataLearningIterator:
         if data_len == 0:
             return
 
-        order = list(range(data_len))
+        indices = list(range(data_len))
         if shuffle:
-            self.random.shuffle(order)
+            self.random.shuffle(indices)
 
         if batch_size < 0:
             batch_size = data_len
 
         for i in range((data_len - 1) // batch_size + 1):
-            yield tuple(zip(*[data[o] for o in order[i * batch_size:(i + 1) * batch_size]]))
+            yield tuple(
+                zip(*[data[index] for index in indices[i * batch_size:(i + 1) * batch_size]])
+            )
 
     def get_instances(self, data_type: str = 'train') -> Tuple[tuple, tuple]:
         """Get all data for a selected data type

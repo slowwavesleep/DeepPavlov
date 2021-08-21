@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import datetime
+import inspect
 import json
 import time
 from itertools import islice
@@ -88,7 +89,7 @@ class NNTrainer(FitTrainer):
 
     """
 
-    def __init__(self, chainer_config: dict, *, 
+    def __init__(self, chainer_config: dict, *,
                  batch_size: int = 1,
                  epochs: int = -1,
                  start_epoch_num: int = 0,
@@ -104,9 +105,16 @@ class NNTrainer(FitTrainer):
                  validation_patience: int = 5, val_every_n_epochs: int = -1, val_every_n_batches: int = -1,
                  log_every_n_batches: int = -1, log_every_n_epochs: int = -1, log_on_k_batches: int = 1,
                  **kwargs) -> None:
-        super().__init__(chainer_config, batch_size=batch_size, metrics=metrics, evaluation_targets=evaluation_targets,
-                         show_examples=show_examples, tensorboard_log_dir=tensorboard_log_dir,
-                         max_test_batches=max_test_batches, **kwargs)
+        super().__init__(
+            chainer_config,
+            batch_size=batch_size,
+            metrics=metrics,
+            evaluation_targets=evaluation_targets,
+            show_examples=show_examples,
+            tensorboard_log_dir=tensorboard_log_dir,
+            max_test_batches=max_test_batches,
+            **kwargs
+        )
         if train_metrics is None:
             self.train_metrics = self.metrics
         else:
@@ -162,11 +170,24 @@ class NNTrainer(FitTrainer):
     def _is_first_validation(self):
         return self.validation_number == 1
 
-    def _validate(self, iterator: DataLearningIterator,
-                  tensorboard_tag: Optional[str] = None, tensorboard_index: Optional[int] = None) -> None:
+    def _validate(self,
+                  iterator: DataLearningIterator,
+                  tensorboard_tag: Optional[str] = None,
+                  tensorboard_index: Optional[int] = None) -> None:
+        data_type = 'valid'
+        if hasattr(iterator.data[data_type], "__len__"):
+            total_size = len(iterator.data[data_type]) // max(self.batch_size, 1)
+        else:
+            total_size = None
         self._send_event(event_name='before_validation')
-        report = self.test(iterator.gen_batches(self.batch_size, data_type='valid', shuffle=False),
-                           start_time=self.start_time)
+        # print(inspect.signature(self.test))
+        report = super().test(
+            iterator.gen_batches(
+                self.batch_size, data_type=data_type, shuffle=False,
+            ),
+            start_time=self.start_time,
+            total_size=total_size
+        )
 
         report['epochs_done'] = self.epoch
         report['batches_seen'] = self.train_batches_seen
@@ -220,8 +241,10 @@ class NNTrainer(FitTrainer):
         print(json.dumps(report, ensure_ascii=False, cls=NumpyArrayEncoder))
         self.validation_number += 1
 
-    def _log(self, iterator: DataLearningIterator,
-             tensorboard_tag: Optional[str] = None, tensorboard_index: Optional[int] = None) -> None:
+    def _log(self,
+             iterator: DataLearningIterator,
+             tensorboard_tag: Optional[str] = None,
+             tensorboard_index: Optional[int] = None) -> None:
         self._send_event(event_name='before_log')
         if self.log_on_k_batches == 0:
             report = {
@@ -295,8 +318,9 @@ class NNTrainer(FitTrainer):
                     self._log(iterator, tensorboard_tag='every_n_batches', tensorboard_index=self.train_batches_seen)
 
                 if self.val_every_n_batches > 0 and self.train_batches_seen % self.val_every_n_batches == 0:
-                    self._validate(iterator,
-                                   tensorboard_tag='every_n_batches', tensorboard_index=self.train_batches_seen)
+                    self._validate(
+                        iterator, tensorboard_tag='every_n_batches', tensorboard_index=self.train_batches_seen
+                    )
 
                 self._send_event(event_name='after_batch')
 

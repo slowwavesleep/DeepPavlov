@@ -19,6 +19,9 @@ from itertools import islice
 from logging import getLogger
 from pathlib import Path
 from typing import Tuple, Dict, Union, Optional, Iterable, Any, Collection
+import inspect
+
+from tqdm import tqdm
 
 from deeppavlov.core.commands.infer import build_model
 from deeppavlov.core.commands.utils import expand_path
@@ -72,6 +75,7 @@ class FitTrainer:
         self.metrics = parse_metrics(metrics, self._chainer.in_y, self._chainer.out_params)
         self.evaluation_targets = tuple(evaluation_targets)
         self.show_examples = show_examples
+        self.disable_tqdm = False
 
         self.max_test_batches = None if max_test_batches < 0 else max_test_batches
 
@@ -159,7 +163,8 @@ class FitTrainer:
             self._loaded = True
 
     def get_chainer(self) -> Chainer:
-        """Returns a :class:`~deeppavlov.core.common.chainer.Chainer` built from ``self.chainer_config`` for inference"""
+        """Returns a :class:`~deeppavlov.core.common.chainer.Chainer` built from ``self.chainer_config`` for
+        inference """
         self._load()
         return self._chainer
 
@@ -168,9 +173,12 @@ class FitTrainer:
         self.fit_chainer(iterator)
         self._saved = True
 
-    def test(self, data: Iterable[Tuple[Collection[Any], Collection[Any]]],
-             metrics: Optional[Collection[Metric]] = None, *,
-             start_time: Optional[float] = None, show_examples: Optional[bool] = None) -> dict:
+    def test(self,
+             data: Iterable[Tuple[Collection[Any], Collection[Any]]],
+             metrics: Optional[Collection[Metric]] = None,
+             start_time: Optional[float] = None,
+             show_examples: Optional[bool] = None,
+             total_size: Optional[int] = None) -> dict:
         """
         Calculate metrics and return reports on provided data for currently stored
         :class:`~deeppavlov.core.common.chainer.Chainer`
@@ -200,9 +208,16 @@ class FitTrainer:
         outputs = {out: [] for out in expected_outputs}
         examples = 0
 
+        # progress_bar = tqdm(
+        #     total=total_size,
+        #     desc="Validation batches",
+        #     disable=self.disable_tqdm,
+        #     leave=True
+        # )
+
         data = islice(data, self.max_test_batches)
 
-        for x, y_true in data:
+        for x, y_true in tqdm(data, total=total_size):
             examples += len(x)
             y_predicted = list(self._chainer.compute(list(x), list(y_true), targets=expected_outputs))
             if len(expected_outputs) == 1:
@@ -240,7 +255,10 @@ class FitTrainer:
 
         return report
 
-    def evaluate(self, iterator: DataLearningIterator, evaluation_targets: Optional[Iterable[str]] = None, *,
+    def evaluate(self,
+                 iterator: DataLearningIterator,
+                 evaluation_targets: Optional[Iterable[str]] = None,
+                 *,
                  print_reports: bool = True) -> Dict[str, dict]:
         """
         Run :meth:`test` on multiple data types using provided data iterator
@@ -260,8 +278,13 @@ class FitTrainer:
         res = {}
 
         for data_type in evaluation_targets:
+            if hasattr(iterator.data[data_type], "__len__"):
+                total_size = len(iterator.data[data_type]) // max(self.batch_size, 1)
+            else:
+                total_size = None
             data_gen = iterator.gen_batches(self.batch_size, data_type=data_type, shuffle=False)
-            report = self.test(data_gen)
+            # print(inspect.signature(self.test))
+            report = self.test(data=data_gen, total_size=total_size)
             res[data_type] = report
             if print_reports:
                 print(json.dumps({data_type: report}, ensure_ascii=False, cls=NumpyArrayEncoder))
