@@ -19,7 +19,6 @@ from itertools import islice
 from logging import getLogger
 from pathlib import Path
 from typing import Tuple, Dict, Union, Optional, Iterable, Any, Collection
-import inspect
 
 from tqdm import tqdm
 
@@ -283,7 +282,6 @@ class FitTrainer:
             else:
                 total_size = None
             data_gen = iterator.gen_batches(self.batch_size, data_type=data_type, shuffle=False)
-            # print(inspect.signature(self.test))
             report = self.test(data=data_gen, total_size=total_size)
             res[data_type] = report
             if print_reports:

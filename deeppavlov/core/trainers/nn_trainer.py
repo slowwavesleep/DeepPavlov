@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import datetime
-import inspect
 import json
 import time
 from itertools import islice
@@ -180,8 +179,7 @@ class NNTrainer(FitTrainer):
         else:
             total_size = None
         self._send_event(event_name='before_validation')
-        # print(inspect.signature(self.test))
-        report = super().test(
+        report = self.test(
             iterator.gen_batches(
                 self.batch_size, data_type=data_type, shuffle=False,
             ),
