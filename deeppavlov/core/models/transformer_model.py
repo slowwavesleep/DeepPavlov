@@ -33,3 +33,18 @@ class TransformerModel(TorchModel):
     @abstractmethod
     def train_on_batch(self, x: list, y: list):
         ...
+
+
+    @abstractmethod
+    def _load_hf_model(self, model: str, with_weights: bool):
+        ...
+
+
+    @overrides
+    def load(self, fname):
+        if fname is not None:
+            self.load_path = fname
+
+        if self.pretrained_bert:
+            ...
+
