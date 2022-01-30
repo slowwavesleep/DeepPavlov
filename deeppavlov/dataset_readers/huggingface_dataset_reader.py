@@ -80,7 +80,7 @@ class HuggingFaceDatasetReader(DatasetReader):
                                                            percentage=percentage),
                                    **kwargs)
             dataset = [dataset_split.map(preprocess_boolq, batched=True) for dataset_split in dataset]
-        elif path == "super_glue" and name == "record":
+        elif (path == "super_glue" and name == "record") or (path == "russian_super_glue" and name == "rucos"):
             label_column = "label"
             dataset = [
                 binary_downsample(
@@ -172,9 +172,9 @@ def preprocess_boolq(examples: Dataset) -> Dict[str, List[str]]:
     return {"passage": passages}
 
 
-def preprocess_record(examples: Dataset) -> Dict[str,
-                                                 Union[List[str],
-                                                       List[int]]]:
+def preprocess_record(
+        examples: Dataset, *, clean_entities: bool = True
+) -> Dict[str, Union[List[str], List[int]]]:
     """ReCoRD preprocessing to be applied by the map function. This transforms the original
     nested structure of the dataset into a flat one. New indices are generated to allow for
     the restoration of the original structure. The resulting dataset amounts to a binary
@@ -210,6 +210,21 @@ def preprocess_record(examples: Dataset) -> Dict[str,
     entities: List[List[str]] = examples["entities"]
     indices: List[Dict[str, int]] = examples["idx"]
 
+    if clean_entities:
+        tmp_entities = []
+        for list_of_entities in entities:
+            tmp_entities.append(
+                list(set([entity.strip("\n ,.!") for entity in list_of_entities]))
+            )
+        entities = tmp_entities
+
+        tmp_answers = []
+        for list_of_answers in answers:
+            tmp_answers.append(
+                list(set([answer.strip("\n ,.!") for answer in list_of_answers]))
+            )
+        answers = tmp_answers
+
     # new indices for flat examples
     merged_indices: List[str] = []
     # queries with placeholders filled
@@ -221,16 +236,19 @@ def preprocess_record(examples: Dataset) -> Dict[str,
     # whether the entity in this example is found in the answers (0 or 1)
     labels: List[int] = []
 
-    for query, passage, list_of_answers, list_of_entities, index in zip(queries,
-                                                                        passages,
-                                                                        answers,
-                                                                        entities,
-                                                                        indices):
+    for query, passage, list_of_answers, list_of_entities, index in zip(
+            queries,
+            passages,
+            answers,
+            entities,
+            indices,
+    ):
         num_candidates: int = len(list_of_entities)
 
         candidate_queries: List[str] = [fill_placeholder(query, entity) for entity in list_of_entities]
-        cur_labels: List[int] = [int(entity in list_of_answers) if list_of_answers else -1 for entity in
-                                 list_of_entities]
+        cur_labels: List[int] = [
+            int(entity in list_of_answers) if list_of_answers else -1 for entity in list_of_entities
+        ]
         cur_passages: List[str] = [passage] * num_candidates
 
         # keep track of the indices to be able to use target metrics
@@ -238,11 +256,12 @@ def preprocess_record(examples: Dataset) -> Dict[str,
         query_index: int = index["query"]
         example_indices: List[str] = [f"{passage_index}-{query_index}-{num_candidates}"] * num_candidates
 
-        merged_indices.extend(example_indices)
-        filled_queries.extend(candidate_queries)
-        extended_passages.extend(cur_passages)
-        flat_entities.extend(list_of_entities)
-        labels.extend(cur_labels)
+        if sum(cur_labels) != 0:
+            merged_indices.extend(example_indices)
+            filled_queries.extend(candidate_queries)
+            extended_passages.extend(cur_passages)
+            flat_entities.extend(list_of_entities)
+            labels.extend(cur_labels)
 
     return {"idx": merged_indices,
             "query": filled_queries,
