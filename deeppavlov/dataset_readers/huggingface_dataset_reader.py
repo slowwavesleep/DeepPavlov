@@ -99,6 +99,12 @@ class HuggingFaceDatasetReader(DatasetReader):
                 for dataset_split, ratio
                 in zip(dataset, downsample_ratio)
             ]
+        elif (path == "super_glue" and name == "multirc") or (path == "russian_super_glue" and name == "muserc"):
+            dataset = [
+                dataset_split.map(
+                    preprocess_multirc, batched=True, remove_columns=["paragraph", "question"]
+                ).rename_column("answer", "answers") for dataset_split in dataset
+            ]
         return dict(zip(split_mapping.keys(), dataset))
 
 
@@ -144,8 +150,10 @@ def preprocess_copa(examples: Dataset) -> Dict[str, List[List[str]]]:
 
     choices = [[choice1, choice2] for choice1, choice2 in zip(examples["choice1"], examples["choice2"])]
 
-    return {"contexts": contexts,
-            "choices": choices}
+    return {
+        "contexts": contexts,
+        "choices": choices
+    }
 
 
 def preprocess_boolq(examples: Dataset) -> Dict[str, List[str]]:
@@ -263,11 +271,13 @@ def preprocess_record(
             flat_entities.extend(list_of_entities)
             labels.extend(cur_labels)
 
-    return {"idx": merged_indices,
-            "query": filled_queries,
-            "passage": extended_passages,
-            "entities": flat_entities,
-            "label": labels}
+    return {
+        "idx": merged_indices,
+        "query": filled_queries,
+        "passage": extended_passages,
+        "entities": flat_entities,
+        "label": labels
+    }
 
 
 def add_label_names(dataset: Dataset, label_column: str, label_names: List[str]):
@@ -374,3 +384,25 @@ def add_num_examples(dataset: Dataset) -> Dict[str, List[int]]:
     """
     num_examples = len(dataset[next(iter(dataset))])
     return {"num_examples": [num_examples] * num_examples}
+
+
+def preprocess_multirc(examples: Dataset, *, clean_paragraphs: bool = True):
+    paragraphs: List[str] = examples["paragraph"]
+    questions: List[str] = examples["question"]
+
+    if clean_paragraphs:
+        paragraphs = [
+            re.sub(
+                r"\s+",
+                " ",
+                re.sub(r"\(\d{1,2}\)", "", paragraph).strip()
+            )
+            for paragraph in paragraphs
+        ]
+
+    contexts: List[str] = []
+
+    for paragraph, question in zip(paragraphs, questions):
+        contexts.append(f"{paragraph} {question}")
+
+    return {"contexts": contexts}
