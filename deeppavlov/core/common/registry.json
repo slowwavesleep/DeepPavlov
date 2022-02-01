@@ -144,6 +144,7 @@
   "snips_intents_iterator": "deeppavlov.dataset_iterators.snips_intents_iterator:SnipsIntentIterator",
   "snips_ner_iterator": "deeppavlov.dataset_iterators.snips_ner_iterator:SnipsNerIterator",
   "snips_reader": "deeppavlov.dataset_readers.snips_reader:SnipsReader",
+  "span_classifier": "deeppavlov.models.classifiers.span_classifier:SpanClassifier",
   "spelling_error_model": "deeppavlov.models.spelling_correction.brillmoore.error_model:ErrorModel",
   "spelling_levenshtein": "deeppavlov.models.spelling_correction.levenshtein.searcher_component:LevenshteinSearcherComponent",
   "split_tokenizer": "deeppavlov.models.tokenizers.split_tokenizer:SplitTokenizer",
