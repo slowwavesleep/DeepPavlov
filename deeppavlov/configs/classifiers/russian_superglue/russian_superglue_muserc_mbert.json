@@ -5,7 +5,7 @@
       "ROOT_PATH": "~/.deeppavlov",
       "DOWNLOADS_PATH": "{ROOT_PATH}/downloads",
       "MODELS_PATH": "{ROOT_PATH}/models",
-      "MODEL_PATH": "{MODELS_PATH}/classifiers/russian_superglue_terra_{BASE_MODEL}",
+      "MODEL_PATH": "{MODELS_PATH}/classifiers/russian_superglue_muserc_{BASE_MODEL}",
       "BINARY_CLASSIFICATION": true
     }
   },
