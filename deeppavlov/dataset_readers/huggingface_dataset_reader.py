@@ -103,7 +103,7 @@ class HuggingFaceDatasetReader(DatasetReader):
             dataset = [
                 dataset_split.map(
                     preprocess_multirc, batched=True, remove_columns=["paragraph", "question"]
-                ).rename_column("answer", "answers") for dataset_split in dataset
+                ) for dataset_split in dataset
             ]
         return dict(zip(split_mapping.keys(), dataset))
 
@@ -405,4 +405,4 @@ def preprocess_multirc(examples: Dataset, *, clean_paragraphs: bool = True):
     for paragraph, question in zip(paragraphs, questions):
         contexts.append(f"{paragraph} {question}")
 
-    return {"contexts": contexts}
+    return {"context": contexts}
