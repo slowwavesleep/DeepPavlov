@@ -22,7 +22,7 @@ import torch
 from typing import Tuple, List, Optional, Union, Dict, Set
 
 import numpy as np
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, BertTokenizer
 from transformers.data.processors.utils import InputFeatures
 
 from deeppavlov.core.commands.utils import expand_path
@@ -644,3 +644,171 @@ class RecordExampleAccumulator:
             int: the expected number of examples for this index
         """
         return int(index.split("-")[-1])
+
+@register('torch_rwsd_transformers_preprocessor')
+class TorchTransformersRwsdPreprocessor(Component):
+    """Tokenize text on subtokens, encode subtokens with their indices, create tokens and segment masks.
+
+    Check details in :func:`bert_dp.preprocessing.convert_examples_to_features` function.
+
+    Args:
+        vocab_file: path to vocabulary
+        do_lower_case: set True if lowercasing is needed
+        max_seq_length: max sequence length in subtokens, including [SEP] and [CLS] tokens
+        return_tokens: whether to return tuple of input features and tokens, or only input features
+
+    Attributes:
+        max_seq_length: max sequence length in subtokens, including [SEP] and [CLS] tokens
+        return_tokens: whether to return tuple of input features and tokens, or only input features
+        tokenizer: instance of Bert FullTokenizer
+
+    """
+    def get_word_index(self, s, idx):
+        words = re.findall(r'\s*\S+\s*', s)
+        return sum(map(len, words[:idx])) + len(words[idx]) - len(words[idx].lstrip())
+
+    def __init__(self,
+                 vocab_file: str,
+                 do_lower_case: bool = True,
+                 max_seq_length: int = 512,
+                 return_tokens: bool = False,
+                 add_token_type_ids: bool = False,
+                 **kwargs) -> None:
+        self.max_seq_length = max_seq_length
+        self.return_tokens = return_tokens
+        self.add_token_type_ids = add_token_type_ids
+        self.do_lower_case = do_lower_case
+        if Path(vocab_file).is_file():
+            vocab_file = str(expand_path(vocab_file))
+            self.tokenizer = BertTokenizer(vocab_file,
+                                           do_lower_case=do_lower_case)
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(vocab_file, do_lower_case=do_lower_case)
+        
+
+    def bert_mapping(self, contexts, bert_features, *args, **kwargs):
+        subtok2chars: List[Dict[int, int]] = []
+        char2subtoks: List[Dict[int, int]] = []
+
+        for batch_counter, (context, features) in enumerate(zip(contexts, bert_features)):
+            subtokens: List[str]
+            print(features)
+            if self.do_lower_case:
+                context = context.lower()
+            subtokens = features.tokens
+            context_start = subtokens.index('[SEP]') + 1
+            idx = 0
+            subtok2char: Dict[int, int] = {}
+            char2subtok: Dict[int, int] = {}
+            print(subtokens)
+            for i, subtok in list(enumerate(subtokens)):
+                subtok = subtok[2:] if subtok.startswith('##') else subtok
+                #print('*')
+                #print(subtok)
+                subtok_pos = context[idx:].find(subtok)
+                #print(context[idx:])
+                #print(subtok_pos)
+                if subtok_pos == -1 and subtok !='[CLS]':
+                    # it could be UNK
+                    idx += 1  # len was at least one
+                else:
+                    # print(k, '\t', t, p + idx)
+                    idx += subtok_pos
+                    subtok2char[i] = idx
+                    for j in range(len(subtok)):
+                        char2subtok[idx + j] = i
+                    idx += len(subtok)
+                print(subtok2char)
+                if len(subtok2char) == 0:
+                    breakpoint()
+            subtok2chars.append(subtok2char)
+            char2subtoks.append(char2subtok)
+        assert all([len(s)>0 for s in subtok2chars]), breakpoint()
+        assert all([len(s)>0 for s in char2subtoks]), breakpoint()
+        return subtok2chars, char2subtoks
+    
+    def __call__(self, texts, span1_ids,span2_ids,span1_texts,span2_texts):
+        """Tokenize and create masks.
+
+        texts_a and texts_b are separated by [SEP] token
+
+        Args:
+            texts_a: list of texts,
+            texts_b: list of texts, it could be None, e.g. single sentence classification task
+
+        Returns:
+            batch of :class:`transformers.data.processors.utils.InputFeatures` with subtokens, subtoken ids, \
+                subtoken mask, segment mask, or tuple of batch of InputFeatures and Batch of subtokens
+        """
+        span1_char_ids = [text.index(span1_text) for text,span1_text in zip(texts, span1_texts)]
+        span2_char_ids = [text.index(span2_text) for text,span2_text in zip(texts, span2_texts)]
+
+        for span1_char_id,span1_nwords,span2_char_id,span2_nwords, text,span1_text,span2_text in zip(span1_char_ids,span1_ids,span2_char_ids,span2_ids,texts,span1_texts,span2_texts):
+            if text[:span1_char_id].count(' ') != span1_nwords:
+                print('span1')
+                print((text,span1_text,span1_nwords,span1_char_id))
+                #breakpoint()
+            if text[:span2_char_id].count(' ') != span2_nwords:
+                print('span2')
+                print((text,span2_text,span2_nwords,span2_char_id))
+                #breakpoint()            
+        #span2_char_ids = [self.get_word_index(text, span2_id) for text, span2_id in zip(texts, span2_ids)]
+        #assert all([id1==id2 for id1,id2 in zip(span1_char_ids, span1_indexed_ids)]), breakpoint()
+        #assert all([id1==id2 for id1,id2 in zip(span2_char_ids, span2_indexed_ids)]), breakpoint()
+        if self.do_lower_case:
+            span1_texts = [k.lower() for k in span1_texts]
+            span2_texts = [k.lower() for k in span2_texts]
+        input_features = []
+        tokens = []
+        spans1 = []
+        spans2 = []
+        for text_a in texts:
+            encoded_dict = self.tokenizer.encode_plus(
+                text=text_a, text_pair=None,
+                add_special_tokens=True,
+                max_length=self.max_seq_length,
+                truncation=True,
+                padding='max_length',
+                return_attention_mask=True,
+                return_tensors='pt')
+            #breakpoint()
+            if 'token_type_ids' not in encoded_dict:
+                if self.add_token_type_ids:
+                    input_ids = encoded_dict['input_ids']
+                    seq_len = input_ids.size(1)
+                    sep = torch.where(input_ids == self.tokenizer.sep_token_id)[1][0].item()
+                    len_a = min(sep + 1, seq_len)
+                    len_b = seq_len - len_a
+                    encoded_dict['token_type_ids'] = torch.cat((torch.zeros(1, len_a, dtype=int),
+                                                                torch.ones(1, len_b, dtype=int)), dim=1)
+                else:
+                    encoded_dict['token_type_ids'] = torch.tensor([0])
+            curr_features = InputFeatures(input_ids=encoded_dict['input_ids'],
+                                        attention_mask=encoded_dict['attention_mask'],
+                                        token_type_ids=encoded_dict['token_type_ids'],
+                                        label=None
+                                        )
+            print(curr_features.tokens)
+            input_features.append(curr_features)
+            tokens.append(self.tokenizer.convert_ids_to_tokens(encoded_dict['input_ids'][0]))
+        #breakpoint()
+        subtok2chars, char2subtoks = self.bert_mapping(texts, input_features)       
+        for i in range(len(input_features)):
+            char_id = span1_char_ids[i]
+            text = span1_texts[i]
+            try:
+                indices_1 = {char2subtoks[i][j] for j in range(char_id, char_id + len(text)) if j in char2subtoks[i]}
+                st_1 = min(indices_1)
+                end_1 = max(indices_1)
+                char_id = span2_char_ids[i]
+                text = span2_texts[i]
+                indices_2 = {char2subtoks[i][j] for j in range(char_id, char_id + len(text)) if j in char2subtoks[i]}
+                st_2 = min(indices_2)
+                end_2 = max(indices_2)
+            except:
+                breakpoint()
+            spans1.append(torch.Tensor([st_1, end_1]))
+            spans2.append(torch.Tensor([st_2, end_2]))
+            
+        #breakpoint()
+        return input_features, tokens, spans1, spans2
