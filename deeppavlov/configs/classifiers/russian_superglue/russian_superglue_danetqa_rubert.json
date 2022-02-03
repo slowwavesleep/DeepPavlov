@@ -5,7 +5,7 @@
       "ROOT_PATH": "~/.deeppavlov",
       "DOWNLOADS_PATH": "{ROOT_PATH}/downloads",
       "MODELS_PATH": "{ROOT_PATH}/models",
-      "MODEL_PATH": "{MODELS_PATH}/classifiers/superglue_danetqa_{BASE_MODEL}",
+      "MODEL_PATH": "{MODELS_PATH}/classifiers/russian_superglue_danetqa_{BASE_MODEL}",
       "BINARY_CLASSIFICATION": false
     }
   },
@@ -105,7 +105,7 @@
         ],
         "class_name": "proba2labels",
         "is_binary": "{BINARY_CLASSIFICATION}",
-        "confidence_threshold": 0.5
+        "max_proba": true
       },
       {
         "in": [
@@ -122,7 +122,7 @@
     ]
   },
   "train": {
-    "batch_size": 24,
+    "batch_size": 16,
     "metrics": [
       "accuracy"
     ],
