@@ -76,13 +76,16 @@ class HuggingFaceDatasetReader(DatasetReader):
         if path == "super_glue" and name == "copa":
             dataset = [dataset_split.map(preprocess_copa, batched=True) for dataset_split in dataset]
         elif path == "super_glue" and name == "boolq":
-            dataset = load_dataset(path=path,
-                                   name=name,
-                                   split=interleave_splits(
-                                       splits=list(split_mapping.values()),
-                                       percentage=percentage
-                                   ),
-                                   **kwargs)
+            # danetqa doesn't require the same preprocessing
+            dataset = load_dataset(
+                path=path,
+                name=name,
+                split=interleave_splits(
+                    splits=list(split_mapping.values()),
+                    percentage=percentage
+                ),
+                **kwargs
+            )
             dataset = [dataset_split.map(preprocess_boolq, batched=True) for dataset_split in dataset]
         elif (path == "super_glue" and name == "record") or (path == "russian_super_glue" and name == "rucos"):
             label_column = "label"
