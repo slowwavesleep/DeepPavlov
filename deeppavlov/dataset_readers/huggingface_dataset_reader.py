@@ -105,10 +105,10 @@ class HuggingFaceDatasetReader(DatasetReader):
                     preprocess_multirc, batched=True, remove_columns=["paragraph", "question"]
                 ) for dataset_split in dataset
             ]
-        elif path == "russian_super_glue" and name == "rwsd":
+        elif (path == "super_glue" and name == "wsc") or (path == "russian_super_glue" and name == "rwsd"):
             dataset = [
                 dataset_split.map(
-                    preprocess_rwsd,
+                    preprocess_wsc,
                     batched=True,
                     remove_columns=["span1_index", "span2_index", "span1_text", "span2_text"],
                 ) for dataset_split in dataset
@@ -416,10 +416,10 @@ def preprocess_multirc(examples: Dataset, *, clean_paragraphs: bool = True):
     return {"context": contexts}
 
 
-def preprocess_rwsd(dataset: Dataset):
+def preprocess_wsc(dataset: Dataset):
     spans1: List[str] = dataset["span1_text"]
     spans2: List[str] = dataset["span2_text"]
     answers = [
-        f"{s2} → {s1}" for s1, s2 in zip(spans1, spans2)
+        f"{s2.capitalize()} {s1}" for s1, s2 in zip(spans1, spans2)
     ]
     return {"answer": answers}
