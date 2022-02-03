@@ -31,14 +31,16 @@ class HuggingFaceDatasetReader(DatasetReader):
     """
 
     @overrides
-    def read(self,
-             data_path: str,
-             path: str,
-             name: Optional[str] = None,
-             train: str = 'train',
-             valid: Optional[str] = None,
-             test: Optional[str] = None,
-             **kwargs) -> Dict[str, Dataset]:
+    def read(
+            self,
+            data_path: str,
+            path: str,
+            name: Optional[str] = None,
+            train: str = 'train',
+            valid: Optional[str] = None,
+            test: Optional[str] = None,
+            **kwargs
+    ) -> Dict[str, Dataset]:
         """Wraps datasets.load_dataset method
 
         Args:
@@ -76,8 +78,10 @@ class HuggingFaceDatasetReader(DatasetReader):
         elif path == "super_glue" and name == "boolq":
             dataset = load_dataset(path=path,
                                    name=name,
-                                   split=interleave_splits(splits=list(split_mapping.values()),
-                                                           percentage=percentage),
+                                   split=interleave_splits(
+                                       splits=list(split_mapping.values()),
+                                       percentage=percentage
+                                   ),
                                    **kwargs)
             dataset = [dataset_split.map(preprocess_boolq, batched=True) for dataset_split in dataset]
         elif (path == "super_glue" and name == "record") or (path == "russian_super_glue" and name == "rucos"):
@@ -197,6 +201,7 @@ def preprocess_record(
     classification problem.
     Args:
         examples: an instance of Dataset class
+        clean_entities: a boolean flag indicating whether to clean-up given entities
     Returns:
         Dict[str, Union[List[str], List[int]]]: flattened features of the dataset
     """
@@ -303,12 +308,14 @@ def add_label_names(dataset: Dataset, label_column: str, label_names: List[str])
     return dataset.cast(new_features)
 
 
-def binary_downsample(dataset: Dataset,
-                      ratio: float = 0.,
-                      seed: int = 42,
-                      label_column: str = "label",
-                      *,
-                      do_correction: bool = True) -> Dataset:
+def binary_downsample(
+        dataset: Dataset,
+        ratio: float = 0.,
+        seed: int = 42,
+        label_column: str = "label",
+        *,
+        do_correction: bool = True
+) -> Dataset:
     """Downsamples a given dataset to the specified negative to positive examples ratio. Only works with
     binary classification datasets with labels denoted as `0` and `1`.
     Args:
@@ -394,7 +401,7 @@ def add_num_examples(dataset: Dataset) -> Dict[str, List[int]]:
     return {"num_examples": [num_examples] * num_examples}
 
 
-def preprocess_multirc(examples: Dataset, *, clean_paragraphs: bool = True):
+def preprocess_multirc(examples: Dataset, *, clean_paragraphs: bool = True) -> Dict[str, List[str]]:
     paragraphs: List[str] = examples["paragraph"]
     questions: List[str] = examples["question"]
 
@@ -416,7 +423,7 @@ def preprocess_multirc(examples: Dataset, *, clean_paragraphs: bool = True):
     return {"context": contexts}
 
 
-def preprocess_wsc(dataset: Dataset):
+def preprocess_wsc(dataset: Dataset) -> Dict[str, List[str]]:
     spans1: List[str] = dataset["span1_text"]
     spans2: List[str] = dataset["span2_text"]
     answers = [
