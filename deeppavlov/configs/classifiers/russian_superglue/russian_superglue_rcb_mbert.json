@@ -1,4 +1,13 @@
 {
+  "metadata": {
+    "variables": {
+      "BASE_MODEL": "bert-base-multilingual-cased",
+      "ROOT_PATH": "~/.deeppavlov",
+      "DOWNLOADS_PATH": "{ROOT_PATH}/downloads",
+      "MODELS_PATH": "{ROOT_PATH}/models",
+      "MODEL_PATH": "{MODELS_PATH}/classifiers/russian_superglue_rcb_{BASE_MODEL}"
+    }
+  },
   "dataset_reader": {
     "class_name": "huggingface_dataset_reader",
     "path": "russian_super_glue",
@@ -73,10 +82,8 @@
         "load_path": "{MODEL_PATH}/model",
         "optimizer": "AdamW",
         "optimizer_parameters": {
-          "lr": 1e-06
+          "lr": 2e-05
         },
-        "learning_rate_drop_patience": 3,
-        "learning_rate_drop_div": 2.0,
         "in": [
           "bert_features"
         ],
@@ -112,11 +119,12 @@
     ]
   },
   "train": {
-    "batch_size": 32,
+    "batch_size": 16,
     "metrics": [
       "accuracy"
     ],
     "validation_patience": 10,
+    "epochs": 10,
     "val_every_n_epochs": 1,
     "log_every_n_epochs": 1,
     "show_examples": false,
@@ -126,14 +134,5 @@
     "class_name": "torch_trainer",
     "tensorboard_log_dir": "{MODEL_PATH}/",
     "pytest_max_batches": 2
-  },
-  "metadata": {
-    "variables": {
-      "BASE_MODEL": "bert-base-multilingual-cased",
-      "ROOT_PATH": "~/.deeppavlov",
-      "DOWNLOADS_PATH": "{ROOT_PATH}/downloads",
-      "MODELS_PATH": "{ROOT_PATH}/models",
-      "MODEL_PATH": "{MODELS_PATH}/classifiers/russian_superglue_cb_{BASE_MODEL}"
-    }
   }
 }
