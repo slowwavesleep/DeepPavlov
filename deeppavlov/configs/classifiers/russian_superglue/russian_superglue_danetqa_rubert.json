@@ -15,8 +15,7 @@
     "name": "danetqa",
     "train": "train",
     "valid": "validation",
-    "test": "test",
-    "dev_percentage": 50
+    "test": "test"
   },
   "dataset_iterator": {
     "class_name": "huggingface_dataset_iterator",
