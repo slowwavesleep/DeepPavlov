@@ -127,6 +127,7 @@
       "accuracy"
     ],
     "epochs": 10,
+    "validation_patience": 10,
     "val_every_n_epochs": 1,
     "log_every_n_epochs": 1,
     "show_examples": false,
