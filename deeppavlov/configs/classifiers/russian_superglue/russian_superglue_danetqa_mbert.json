@@ -6,7 +6,7 @@
       "DOWNLOADS_PATH": "{ROOT_PATH}/downloads",
       "MODELS_PATH": "{ROOT_PATH}/models",
       "MODEL_PATH": "{MODELS_PATH}/classifiers/superglue_danetqa_{BASE_MODEL}",
-      "BINARY_CLASSIFICATION": true
+      "BINARY_CLASSIFICATION": false
     }
   },
   "dataset_reader": {
@@ -84,11 +84,8 @@
         "load_path": "{MODEL_PATH}/model",
         "optimizer": "AdamW",
         "optimizer_parameters": {
-          "lr": 2e-05,
-          "weight_decay": 0.1
+          "lr": 2e-05
         },
-        "learning_rate_drop_patience": 3,
-        "learning_rate_drop_div": 2.0,
         "in": [
           "bert_features"
         ],
@@ -125,11 +122,11 @@
     ]
   },
   "train": {
-    "batch_size": 32,
+    "batch_size": 24,
     "metrics": [
       "accuracy"
     ],
-    "validation_patience": 10,
+    "epochs": 10,
     "val_every_n_epochs": 1,
     "log_every_n_epochs": 1,
     "show_examples": false,
