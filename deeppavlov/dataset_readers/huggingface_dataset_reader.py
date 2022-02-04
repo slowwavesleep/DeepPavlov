@@ -36,7 +36,7 @@ class HuggingFaceDatasetReader(DatasetReader):
             data_path: str,
             path: str,
             name: Optional[str] = None,
-            train: str = 'train',
+            train: Optional[str] = None, #for lidirus with no train
             valid: Optional[str] = None,
             test: Optional[str] = None,
             **kwargs
