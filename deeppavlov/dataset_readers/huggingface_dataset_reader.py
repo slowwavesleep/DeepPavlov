@@ -73,7 +73,7 @@ class HuggingFaceDatasetReader(DatasetReader):
             raise ValueError("The number of downsample ratios must be the same as the number of splits")
 
         dataset = load_dataset(path=path, name=name, split=list(split_mapping.values()), **kwargs)
-        if path == "super_glue" and name == "copa":
+        if (path == "super_glue" and name == "copa") or (path == "russian_super_glue" and name == "parus"):
             dataset = [dataset_split.map(preprocess_copa, batched=True) for dataset_split in dataset]
         elif path == "super_glue" and name == "boolq":
             # danetqa doesn't require the same preprocessing
