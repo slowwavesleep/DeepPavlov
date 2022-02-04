@@ -72,11 +72,8 @@
         "load_path": "{MODEL_PATH}/model",
         "optimizer": "AdamW",
         "optimizer_parameters": {
-          "lr": 2e-05,
-          "weight_decay": 0.1
+          "lr": 2e-05
         },
-        "learning_rate_drop_patience": 3,
-        "learning_rate_drop_div": 2.0,
         "in": [
           "bert_features"
         ],
@@ -118,7 +115,7 @@
     ]
   },
   "train": {
-    "batch_size": 64,
+    "batch_size": 12,
     "train_metrics": [
       {
         "name": "accuracy",
@@ -149,6 +146,7 @@
         ]
       }
     ],
+    "epochs": 10,
     "validation_patience": 10,
     "val_every_n_epochs": 1,
     "log_every_n_epochs": 1,
