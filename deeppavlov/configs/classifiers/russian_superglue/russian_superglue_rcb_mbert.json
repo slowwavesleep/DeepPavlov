@@ -121,7 +121,8 @@
   "train": {
     "batch_size": 16,
     "metrics": [
-      "accuracy"
+      "accuracy",
+      "f1_macro"
     ],
     "validation_patience": 10,
     "epochs": 10,
