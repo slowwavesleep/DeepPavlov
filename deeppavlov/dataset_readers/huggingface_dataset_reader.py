@@ -74,7 +74,10 @@ class HuggingFaceDatasetReader(DatasetReader):
 
         dataset = load_dataset(path=path, name=name, split=list(split_mapping.values()), **kwargs)
         if (path == "super_glue" and name == "copa") or (path == "russian_super_glue" and name == "parus"):
-            dataset = [dataset_split.map(preprocess_copa, batched=True) for dataset_split in dataset]
+            lang = "en" if name == "copa" else "ru"
+            dataset = [
+                dataset_split.map(preprocess_copa, batched=True, fn_kwargs={"lang": lang}) for dataset_split in dataset
+            ]
         elif path == "super_glue" and name == "boolq":
             # danetqa doesn't require the same preprocessing
             dataset = load_dataset(
@@ -141,7 +144,7 @@ def interleave_splits(splits: List[str], percentage: int = 50) -> List[str]:
     return mixed_splits
 
 
-def preprocess_copa(examples: Dataset) -> Dict[str, List[List[str]]]:
+def preprocess_copa(examples: Dataset, *, lang: str = "en") -> Dict[str, List[List[str]]]:
     """COPA preprocessing to be applied by the map function.
     Args:
         examples: an instance of Dataset class
@@ -150,10 +153,18 @@ def preprocess_copa(examples: Dataset) -> Dict[str, List[List[str]]]:
         list with number of elements corresponding to the number of choices
         (2 in this case)
     """
-    question_dict = {
-        "cause": "What was the cause of this?",
-        "effect": "What happened as a result?",
-    }
+    if lang == "en":
+        question_dict = {
+            "cause": "What was the cause of this?",
+            "effect": "What happened as a result?",
+        }
+    elif lang == "ru":
+        question_dict = {
+            "cause": "Что было причиной этого?",
+            "effect": "Что случилось в результате?",
+        }
+    else:
+        raise ValueError
 
     num_choices = 2
 
