@@ -122,7 +122,7 @@
     ]
   },
   "train": {
-    "batch_size": 12,
+    "batch_size": 10,
     "metrics": [
       "f1"
     ],
