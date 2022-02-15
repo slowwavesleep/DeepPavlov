@@ -194,7 +194,7 @@ def round_f1(y_true, y_predicted):
     try:
         predictions = [np.round(x) for x in y_predicted]
     except TypeError:
-        if set(y_true) & set(y_predicted) == {'False', 'True'}:
+        if set(y_true).union(set(y_predicted)) == {'False', 'True'}:
             y_true = [1 if y == "True" else 0 for y in y_true]
             predictions = [1 if y == "True" else 0 for y in y_predicted]
         else:
