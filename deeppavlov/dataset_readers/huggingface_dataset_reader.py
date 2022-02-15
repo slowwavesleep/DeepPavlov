@@ -72,7 +72,14 @@ class HuggingFaceDatasetReader(DatasetReader):
         elif isinstance(downsample_ratio, list) and len(downsample_ratio) != len(split_mapping):
             raise ValueError("The number of downsample ratios must be the same as the number of splits")
 
-        dataset = load_dataset(path=path, name=name, split=list(split_mapping.values()), **kwargs)
+        if path == "russian_super_glue" and "_mixed" in name:
+            dataset = load_dataset(
+                path=path, name=name.replace("_mixed", ""), split=list(split_mapping.values()), **kwargs
+            )
+        else:
+            dataset = load_dataset(
+                path=path, name=name, split=list(split_mapping.values()), **kwargs
+            )
         if (path == "super_glue" and name == "copa") or (path == "russian_super_glue" and name == "parus"):
             lang = "en" if name == "copa" else "ru"
             dataset = [
@@ -123,6 +130,18 @@ class HuggingFaceDatasetReader(DatasetReader):
                     remove_columns=["span1_index", "span2_index", "span1_text", "span2_text"],
                 ) for dataset_split in dataset
             ]
+        elif path == "russian_super_glue" and name == "terra_mixed" and "train" in list(split_mapping.values()):
+            from datasets import concatenate_datasets
+            tmp_dataset = []
+            for d, split in zip(dataset, split_mapping.values()):
+                if split == "train":
+                    rte_to_mix = load_dataset("super_glue", "rte", split="train")
+                    combined_train = concatenate_datasets([rte_to_mix, d])
+                    tmp_dataset.append(combined_train)
+                else:
+                    tmp_dataset.append(d)
+            dataset = tmp_dataset
+
         return dict(zip(split_mapping.keys(), dataset))
 
 
