@@ -18,7 +18,7 @@ from collections import Counter
 from math import floor
 from typing import Dict, Optional, List, Union
 
-from datasets import load_dataset, Dataset, Features, ClassLabel
+from datasets import load_dataset, Dataset, Features, ClassLabel, concatenate_datasets
 from overrides import overrides
 
 from deeppavlov.core.common.registry import register
@@ -131,17 +131,40 @@ class HuggingFaceDatasetReader(DatasetReader):
                 ) for dataset_split in dataset
             ]
         elif path == "russian_super_glue" and name == "terra_mixed" and "train" in list(split_mapping.values()):
-            from datasets import concatenate_datasets
             tmp_dataset = []
             for d, split in zip(dataset, split_mapping.values()):
                 if split == "train":
-                    rte_to_mix = load_dataset("super_glue", "rte", split="train")
-                    combined_train = concatenate_datasets([rte_to_mix, d])
+                    to_mix = load_dataset("super_glue", "rte", split="train")
+                    combined_train = concatenate_datasets([to_mix, d])
                     tmp_dataset.append(combined_train)
                 else:
                     tmp_dataset.append(d)
             dataset = tmp_dataset
 
+        elif path == "russian_super_glue" and name == "rcb_mixed" and "train" in list(split_mapping.values()):
+            tmp_dataset = []
+            for d, split in zip(dataset, split_mapping.values()):
+                if split == "train":
+                    to_mix = load_dataset("super_glue", "cb", split="train")
+                    combined_train = concatenate_datasets([to_mix, d.remove_columns(["verb", "negation"])])
+                    tmp_dataset.append(combined_train)
+                else:
+                    tmp_dataset.append(d.remove_columns(["verb", "negation"]))
+            dataset = tmp_dataset
+        elif path == "russian_super_glue" and name == "danetqa_mixed" and "train" in list(split_mapping.values()):
+            tmp_dataset = []
+            for d, split in zip(dataset, split_mapping.values()):
+                if split == "train":
+                    to_mix = load_dataset(
+                        "super_glue", "boolq", split="train"
+                    ).map(
+                        preprocess_boolq, batched=True
+                    ).cast(d.features)
+                    combined_train = concatenate_datasets([to_mix, d])
+                    tmp_dataset.append(combined_train)
+                else:
+                    tmp_dataset.append(d)
+            dataset = tmp_dataset
         return dict(zip(split_mapping.keys(), dataset))
 
 
