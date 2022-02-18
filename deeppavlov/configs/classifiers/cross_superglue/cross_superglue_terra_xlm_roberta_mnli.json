@@ -1,7 +1,7 @@
 {
   "metadata": {
     "variables": {
-      "BASE_MODEL": "bert-base-multilingual-cased",
+      "BASE_MODEL": "DeepPavlov/xlm-roberta-large-en-ru-mnli",
       "ROOT_PATH": "~/.deeppavlov",
       "DOWNLOADS_PATH": "{ROOT_PATH}/downloads",
       "MODELS_PATH": "{ROOT_PATH}/models",
@@ -38,7 +38,7 @@
       {
         "class_name": "torch_transformers_preprocessor",
         "vocab_file": "{BASE_MODEL}",
-        "do_lower_case": true,
+        "do_lower_case": false,
         "max_seq_length": 256,
         "in": [
           "premise",

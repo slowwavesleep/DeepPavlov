@@ -5,14 +5,14 @@
       "ROOT_PATH": "~/.deeppavlov",
       "DOWNLOADS_PATH": "{ROOT_PATH}/downloads",
       "MODELS_PATH": "{ROOT_PATH}/models",
-      "MODEL_PATH": "{MODELS_PATH}/classifiers/cross_superglue_terra_{BASE_MODEL}",
+      "MODEL_PATH": "{MODELS_PATH}/classifiers/cross_superglue_rte_uncased_{BASE_MODEL}",
       "BINARY_CLASSIFICATION": false
     }
   },
   "dataset_reader": {
     "class_name": "huggingface_dataset_reader",
-    "path": "russian_super_glue",
-    "name": "terra",
+    "path": "super_glue",
+    "name": "rte",
     "train": "train",
     "valid": "validation",
     "test": "test"

@@ -45,7 +45,7 @@
       {
         "class_name": "torch_transformers_preprocessor",
         "vocab_file": "{BASE_MODEL}",
-        "do_lower_case": false,
+        "do_lower_case": true,
         "max_seq_length": 256,
         "in": [
           "premise",
